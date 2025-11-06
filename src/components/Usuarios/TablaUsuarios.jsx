@@ -45,7 +45,9 @@ const TablaUsuarios = ({ usuarios, cargando }) => {
             </td>
             <td>{u.Nombre_Usuario}</td>
             <td>
-              <Badge bg={getRolBadge(u.Rol)}>{u.Rol}</Badge>
+              <Badge bg={getRolBadge(u.Rol)} className="text-dark">
+                {u.Rol}
+              </Badge>
             </td>
             <td className="text-center">
               <Button variant="outline-info" size="sm" className="me-1">Ver</Button>

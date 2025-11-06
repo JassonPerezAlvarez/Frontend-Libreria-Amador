@@ -1,10 +1,12 @@
 // src/views/Usuarios.jsx
+import { useState } from "react";
 import { Container, Button } from "react-bootstrap";
 import TablaUsuarios from "../components/Usuarios/TablaUsuarios";
+import CuadroBusquedas from "../components/Busquedas/CuadroBusquedas";
 
 const Usuarios = () => {
-  // Datos de ejemplo (simula tu tabla Usuarios)
-  const usuarios = [
+  // Datos de ejemplo
+  const usuariosOriginales = [
     {
       ID_Usuario: 1,
       Primer_Nombre: "Juan",
@@ -34,13 +36,49 @@ const Usuarios = () => {
     }
   ];
 
+  // Estado para búsqueda
+  const [textoBusqueda, setTextoBusqueda] = useState("");
+
+  const manejarCambioBusqueda = (e) => {
+    setTextoBusqueda(e.target.value);
+  };
+
+  // Función para construir nombre completo
+  const nombreCompleto = (u) => {
+    const partes = [
+      u.Primer_Nombre,
+      u.Segundo_Nombre,
+      u.Primer_Apellido,
+      u.Segundo_Apellido
+    ].filter(Boolean);
+    return partes.join(" ").toLowerCase();
+  };
+
+  // Filtrar usuarios
+  const usuariosFiltrados = usuariosOriginales.filter(usuario => {
+    const busqueda = textoBusqueda.toLowerCase();
+    return (
+      nombreCompleto(usuario).includes(busqueda) ||
+      usuario.Nombre_Usuario.toLowerCase().includes(busqueda) ||
+      usuario.Rol.toLowerCase().includes(busqueda)
+    );
+  });
+
   return (
     <Container className="mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-primary fw-bold">Gestión de Usuarios</h2>
         <Button variant="success">+ Nuevo Usuario</Button>
       </div>
-      <TablaUsuarios usuarios={usuarios} cargando={false} />
+
+      {/* Cuadro de búsqueda */}
+      <CuadroBusquedas
+        textoBusqueda={textoBusqueda}
+        manejarCambioBusqueda={manejarCambioBusqueda}
+      />
+
+      {/* Tabla con datos filtrados */}
+      <TablaUsuarios usuarios={usuariosFiltrados} cargando={false} />
     </Container>
   );
 };
