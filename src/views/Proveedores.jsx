@@ -5,66 +5,49 @@ import TablaProveedores from "../components/Proveedores/TablaProveedores";
 import CuadroBusquedas from "../components/Busquedas/CuadroBusquedas";
 
 const Proveedores = () => {
-  const [proveedoresOriginales, setProveedoresOriginales] = useState([]);
-  const [proveedoresFiltrados, setProveedoresFiltrados] = useState([]);
-  const [cargando, setCargando] = useState(true);
+  const [proveedores, setProveedores] = useState([]); 
   const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [cargando, setCargando] = useState(true);
 
+  //  useEffect para obtener datos del backend
   useEffect(() => {
-    setTimeout(() => {
-      const datos = [
-        {
-          ID_Proveedor: 1,
-          Primer_Nombre: "jasson",
-          Segundo_Nombre: null,
-          Primer_Apellido: "Perez",
-          Segundo_Apellido: null,
-          Contacto: "57917648",
-          Correo: "jassongeme23j@gmail.com"
-        },
-        {
-          ID_Proveedor: 2,
-          Primer_Nombre: "Jeyson",
-          Segundo_Nombre: "JR",
-          Primer_Apellido: "",
-          Segundo_Apellido: "",
-          Contacto: "57917648",
-          Correo: "jassongeme23@gmail.com"
-        },
-      ];
-      setProveedoresOriginales(datos);
-      setProveedoresFiltrados(datos);
-      setCargando(false);
-    }, 800);
+    const obtenerProveedores = async () => {
+      try {
+        const respuesta = await fetch("http://localhost:3000/api/proveedores");
+        if (!respuesta.ok) throw new Error("Error al obtener los proveedores");
+        const datos = await respuesta.json();
+        setProveedores(datos);
+      } catch (error) {
+        console.error("Error al cargar proveedores:", error);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    obtenerProveedores();
   }, []);
 
-  useEffect(() => {
+  // 🔍 Filtrar resultados
+  const proveedoresFiltrados = proveedores.filter((p) => {
     const busqueda = textoBusqueda.toLowerCase().trim();
-    if (!busqueda) {
-      setProveedoresFiltrados(proveedoresOriginales);
-      return;
-    }
+    if (!busqueda) return true;
 
-    const filtrados = proveedoresOriginales.filter(p => {
-      const nombreCompleto = [
-        p.Primer_Nombre,
-        p.Segundo_Nombre,
-        p.Primer_Apellido,
-        p.Segundo_Apellido
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    const nombreCompleto = [
+      p.Primer_Nombre,
+      p.Segundo_Nombre,
+      p.Primer_Apellido,
+      p.Segundo_Apellido,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-      return (
-        nombreCompleto.includes(busqueda) ||
-        p.Contacto.includes(busqueda) ||
-        p.Correo.toLowerCase().includes(busqueda)
-      );
-    });
-
-    setProveedoresFiltrados(filtrados);
-  }, [textoBusqueda, proveedoresOriginales]);
+    return (
+      nombreCompleto.includes(busqueda) ||
+      p.Contacto?.toLowerCase().includes(busqueda) ||
+      p.Correo?.toLowerCase().includes(busqueda)
+    );
+  });
 
   const manejarCambioBusqueda = (e) => {
     setTextoBusqueda(e.target.value);
@@ -72,19 +55,24 @@ const Proveedores = () => {
 
   return (
     <Container className="mt-4">
+      {/* Encabezado */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-primary fw-bold">Gestión de Proveedores</h2>
         <Button variant="success">+ Nuevo Proveedor</Button>
       </div>
 
-      {/* Cuadro de búsqueda */}
+      {/* Búsqueda */}
       <CuadroBusquedas
         textoBusqueda={textoBusqueda}
         manejarCambioBusqueda={manejarCambioBusqueda}
       />
 
-      {/* Tabla con datos filtrados */}
-      <TablaProveedores proveedores={proveedoresFiltrados} cargando={cargando} />
+      {/* Tabla */}
+      {cargando ? (
+        <p>Cargando proveedores...</p>
+      ) : (
+        <TablaProveedores proveedores={proveedoresFiltrados} />
+      )}
     </Container>
   );
 };
