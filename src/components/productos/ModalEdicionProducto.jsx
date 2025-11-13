@@ -26,12 +26,12 @@ const ModalEdicionProducto = ({
         <Form>
           <Row>
             <Col md={6} className="mb-3">
-              <Form.Group controlId="Nombre">
+              <Form.Group controlId="nombreProducto">
                 <Form.Label>Nombre</Form.Label>
                 <Form.Control
                   type="text"
-                  name="Nombre"
-                  value={productoEditado?.Nombre}
+                  name="nombre_producto"
+                  value={productoEditado?.nombre_producto}
                   onChange={manejarCambio}
                   placeholder="Nombre del producto"
                   maxLength={100}
@@ -46,9 +46,9 @@ const ModalEdicionProducto = ({
                 <Form.Control
                   type="text"
                   name="Descripcion"
-                  value={productoEditado?.Descripcion}
+                  value={productoEditado?.DesDescripcion}
                   onChange={manejarCambio}
-                  placeholder="Descripción del producto"
+                  placeholder="Descripcion"
                 />
               </Form.Group>
             </Col>
@@ -62,14 +62,14 @@ const ModalEdicionProducto = ({
               name="Cantidad"
               value={productoEditado?.Cantidad}
               onChange={manejarCambio}
-              placeholder="Cantidad del producto"
+              placeholder="Cantidad"
               maxLength={300}
             />
           </Form.Group>
 
           <Row>
             <Col md={4} className="mb-3">
-              <Form.Group controlId="precioProducto">
+              <Form.Group controlId="Precio_Comp">
                 <Form.Label>Precio_Comp</Form.Label>
                 <Form.Control
                   type="number"
@@ -80,19 +80,24 @@ const ModalEdicionProducto = ({
                   step="0.01"
                 />
               </Form.Group>
+            
             </Col>
-            <Col md={4} className="mb-3">
-              <Form.Group controlId="precioventa">
-                <Form.Label>Precio de Venta</Form.Label>
+          </Row>
+          <Col md={4} className="mb-3">
+              <Form.Group controlId="Precio_Vent">
+                <Form.Label>Precio_Vent</Form.Label>
                 <Form.Control
                   type="number"
                   name="Precio_Vent"
                   value={productoEditado?.Precio_Vent}
                   onChange={manejarCambio}
+                  placeholder="0.00"
+                  step="0.01"
                 />
               </Form.Group>
+            
             </Col>
-          </Row>
+            
         </Form>
       </Modal.Body>
       <Modal.Footer>
@@ -102,7 +107,7 @@ const ModalEdicionProducto = ({
         <Button
           variant="primary"
           onClick={guardarEdicion}
-          disabled={!productoEditado?.Nombre?.trim()}
+          disabled={!productoEditado?.nombre_producto?.trim()}
         >
           Guardar Cambios
         </Button>

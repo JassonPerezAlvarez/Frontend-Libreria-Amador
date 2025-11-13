@@ -3,6 +3,8 @@ import { Container, Col, Row, Button } from "react-bootstrap";
 import TablaProductos from "../components/productos/TablaProductos";
 import ModalRegistroProducto from "../components/productos/ModalRegistroProducto";
 import CuadroBusquedas from "../components/busquedas/CuadroBusquedas.jsx";
+import ModalEdicionProducto from "../components/productos/ModalEdicionProducto.jsx";
+import ModalEliminacionProducto from "../components/productos/ModalEliminacionProducto.jsx";
 
 const Productos = () => {
   const [productos, setProductos] = useState([]);
@@ -11,6 +13,12 @@ const Productos = () => {
   const [textoBusqueda, setTextoBusqueda] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
   const elementosPorPagina = 5;
+
+   const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
+
+  const [productoEditado, setProductoEditado] = useState(null);
+  const [productoAEliminar, setProductoAEliminar] = useState(null);
 
   const [mostrarModalRegistro, setMostrarModalRegistro] = useState(false);
   const [nuevoProducto, setNuevoProducto] = useState({
@@ -24,7 +32,7 @@ const Productos = () => {
   // CARGAR PRODUCTOS
   const obtenerProductos = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/productos");
+      const res = await fetch("http://localhost:3000/api/obtenerProductos");
       const data = await res.json();
 
       const normalizados = data.map(p => ({
@@ -92,6 +100,55 @@ const Productos = () => {
     }
   };
 
+  const abrirModalEdicion = (producto) => {
+    setProductoEditado({ ...producto });
+    setMostrarModalEdicion(true);
+  };
+
+  const guardarEdicion = async () => {
+    // Evitar crash si el objeto tiene nombres de campos distintos (p. ej. Nombre vs nombre_producto)
+    if (!(productoEditado?.nombre_producto?.trim() || productoEditado?.Nombre?.trim())) return;
+    try {
+      const respuesta = await fetch(
+        `http://localhost:3000/api/actualizarProductoPatch/${productoEditado.id_producto}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productoEditado),
+        }
+      );
+      if (!respuesta.ok) throw new Error("Error al actualizar producto");
+      setMostrarModalEdicion(false);
+      await obtenerProductos();
+    } catch (error) {
+      console.error("Error al editar producto:", error);
+      alert("No se pudo actualizar el producto.");
+    }
+  };
+
+  const abrirModalEliminacion = (producto) => {
+    setProductoAEliminar(producto);
+    setMostrarModalEliminar(true);
+  };
+
+  const confirmarEliminacion = async () => {
+    try {
+      const respuesta = await fetch(
+        `http://localhost:3000/api/eliminarProducto/${productoAEliminar.id_producto}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!respuesta.ok) throw new Error("Error al eliminar producto");
+      setMostrarModalEliminar(false);
+      setProductoAEliminar(null);
+      await obtenerProductos();
+    } catch (error) {
+      console.error("Error al eliminar producto:", error);
+      alert("No se pudo eliminar el producto.");
+    }
+  };
+
   return (
     <Container className="mt-4">
       <h4>Productos</h4>
@@ -116,6 +173,8 @@ const Productos = () => {
       <TablaProductos
         productos={productosPaginados}
         cargando={cargando}
+        abrirModalEdicion={abrirModalEdicion}
+        abrirModalEliminacion={abrirModalEliminacion}
         totalElementos={productosFiltrados.length}
         elementosPorPagina={elementosPorPagina}
         paginaActual={paginaActual}
@@ -131,6 +190,21 @@ const Productos = () => {
         }
         agregarProducto={agregarProducto}
       />
+
+      <ModalEdicionProducto
+          mostrar={mostrarModalEdicion}
+          setMostrar={setMostrarModalEdicion}
+          productoEditado={productoEditado}
+          setProductoEditado={setProductoEditado}
+          guardarEdicion={guardarEdicion}
+        />
+
+        <ModalEliminacionProducto
+          mostrar={mostrarModalEliminar}
+          setMostrar={setMostrarModalEliminar}
+          producto={productoAEliminar}
+          confirmarEliminacion={confirmarEliminacion}
+        />
     </Container>
   );
 };
