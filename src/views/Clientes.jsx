@@ -11,7 +11,9 @@ const Clientes = () => {
   const [showModal, setShowModal] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [pagina, setPagina] = useState(1);
-  const porPagina = 6; // Cambiado a 6
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [modoModal, setModoModal] = useState("crear"); // "crear", "ver", "editar"
+  const porPagina = 6;
 
   // Obtener clientes
   const obtenerClientes = async () => {
@@ -23,6 +25,7 @@ const Clientes = () => {
       setClientesFiltrados(data);
     } catch (error) {
       console.error(error);
+      alert("Error al cargar clientes");
     } finally {
       setCargando(false);
     }
@@ -64,19 +67,17 @@ const Clientes = () => {
   const inicio = (pagina - 1) * porPagina;
   const actuales = clientesFiltrados.slice(inicio, inicio + porPagina);
 
-  const guardarCliente = async (nuevo) => {
-    try {
-      const res = await fetch("http://localhost:3000/api/RegistrarCliente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nuevo),
-      });
-      if (!res.ok) throw new Error("Error al guardar");
-      obtenerClientes();
-      setShowModal(false);
-    } catch (error) {
-      console.error(error);
-    }
+  // Acciones
+  const verCliente = (cliente) => {
+    setClienteSeleccionado(cliente);
+    setModoModal("ver");
+    setShowModal(true);
+  };
+
+  const editarCliente = (cliente) => {
+    setClienteSeleccionado(cliente);
+    setModoModal("editar");
+    setShowModal(true);
   };
 
   const eliminarCliente = async (id) => {
@@ -85,18 +86,56 @@ const Clientes = () => {
       const res = await fetch(`http://localhost:3000/api/clientes/${id}`, {
         method: "DELETE",
       });
-      if (res.ok) obtenerClientes();
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || "Error al eliminar");
+      }
+      obtenerClientes();
     } catch (error) {
-      console.error(error);
+      alert("Error: " + error.message);
     }
+  };
+
+  const guardarCliente = async (datos) => {
+    try {
+      let res;
+      if (modoModal === "editar" && clienteSeleccionado?.ID_Cliente) {
+        res = await fetch(`http://localhost:3000/api/clientes/${clienteSeleccionado.ID_Cliente}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(datos),
+        });
+      } else {
+        res = await fetch("http://localhost:3000/api/RegistrarCliente", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(datos),
+        });
+      }
+      if (!res.ok) throw new Error("Error al guardar");
+      obtenerClientes();
+      cerrarModal();
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  };
+
+  const cerrarModal = () => {
+    setShowModal(false);
+    setClienteSeleccionado(null);
+    setModoModal("crear");
+  };
+
+  const abrirNuevo = () => {
+    setClienteSeleccionado(null);
+    setModoModal("crear");
+    setShowModal(true);
   };
 
   return (
     <Container className="mt-4 pb-5">
-      {/* Título */}
       <h2 className="mb-4 fw-bold text-primary">Clientes</h2>
 
-      {/* Búsqueda + Botón */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div style={{ width: "320px" }}>
           <CuadroBusquedas
@@ -105,16 +144,11 @@ const Clientes = () => {
             placeholder="Buscar por nombre, cédula, contacto..."
           />
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setShowModal(true)}
-          className="d-flex align-items-center gap-2 px-4"
-        >
+        <Button variant="primary" onClick={abrirNuevo} className="d-flex align-items-center gap-2 px-4">
           + Nuevo Cliente
         </Button>
       </div>
 
-      {/* Tabla */}
       <div className="border rounded shadow-sm overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
@@ -155,10 +189,20 @@ const Clientes = () => {
                     <td>{c.Contacto || "-"}</td>
                     <td className="text-muted small">{c.Direccion || "-"}</td>
                     <td className="text-center">
-                      <Button variant="outline-info" size="sm" className="me-1">
+                      <Button
+                        variant="outline-info"
+                        size="sm"
+                        className="me-1"
+                        onClick={() => verCliente(c)}
+                      >
                         Ver
                       </Button>
-                      <Button variant="outline-warning" size="sm" className="me-1">
+                      <Button
+                        variant="outline-warning"
+                        size="sm"
+                        className="me-1"
+                        onClick={() => editarCliente(c)}
+                      >
                         Editar
                       </Button>
                       <Button
@@ -177,75 +221,64 @@ const Clientes = () => {
         </div>
       </div>
 
-      {/* Paginación fija en la parte inferior y centrada */}
+      {/* Paginación */}
       <div
         style={{
           position: "fixed",
           bottom: "20px",
           left: "50%",
           transform: "translateX(-50%)",
-          zIndex: 1000,
+          zIndex: 1,
           backgroundColor: "white",
           padding: "8px 16px",
           borderRadius: "8px",
           boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          pointerEvents: "none",
         }}
       >
-        <div className="d-flex align-items-center gap-3">
+        <div style={{ pointerEvents: "auto" }} className="d-flex align-items-center gap-3">
           <div className="text-muted small">
-            Mostrando {inicio + 1} -{" "}
-            {Math.min(inicio + porPagina, clientesFiltrados.length)} de{" "}
-            {clientesFiltrados.length}
+            Mostrando {inicio + 1} - {Math.min(inicio + porPagina, clientesFiltrados.length)} de {clientesFiltrados.length}
           </div>
           <Pagination size="sm">
-            <Pagination.First
-              onClick={() => setPagina(1)}
-              disabled={pagina === 1}
-            />
-            <Pagination.Prev
-              onClick={() => setPagina(pagina - 1)}
-              disabled={pagina === 1}
-            />
+            <Pagination.First onClick={() => setPagina(1)} disabled={pagina === 1} />
+            <Pagination.Prev onClick={() => setPagina(pagina - 1)} disabled={pagina === 1} />
             {[...Array(Math.min(totalPaginas, 5))].map((_, i) => {
-              const numPagina = i + 1;
+              const num = i + 1;
               return (
-                <Pagination.Item
-                  key={numPagina}
-                  active={numPagina === pagina}
-                  onClick={() => setPagina(numPagina)}
-                >
-                  {numPagina}
+                <Pagination.Item key={num} active={num === pagina} onClick={() => setPagina(num)}>
+                  {num}
                 </Pagination.Item>
               );
             })}
             {totalPaginas > 5 && (
               <>
                 <Pagination.Ellipsis />
-                <Pagination.Item
-                  active={pagina === totalPaginas}
-                  onClick={() => setPagina(totalPaginas)}
-                >
+                <Pagination.Item active={pagina === totalPaginas} onClick={() => setPagina(totalPaginas)}>
                   {totalPaginas}
                 </Pagination.Item>
               </>
             )}
-            <Pagination.Next
-              onClick={() => setPagina(pagina + 1)}
-              disabled={pagina === totalPaginas}
-            />
-            <Pagination.Last
-              onClick={() => setPagina(totalPaginas)}
-              disabled={pagina === totalPaginas}
-            />
+            <Pagination.Next onClick={() => setPagina(pagina + 1)} disabled={pagina === totalPaginas} />
+            <Pagination.Last onClick={() => setPagina(totalPaginas)} disabled={pagina === totalPaginas} />
           </Pagination>
         </div>
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       <ModalRegistroCliente
         show={showModal}
-        onHide={() => setShowModal(false)}
+        onHide={cerrarModal}
         onGuardar={guardarCliente}
+        clienteEditar={clienteSeleccionado}
+        soloLectura={modoModal === "ver"}
+        titulo={
+          modoModal === "ver"
+            ? "Detalles del Cliente"
+            : modoModal === "editar"
+            ? "Editar Cliente"
+            : "Registrar Nuevo Cliente"
+        }
       />
     </Container>
   );
