@@ -1,66 +1,139 @@
-// src/views/Compras.jsx
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Button } from "react-bootstrap";
 import TablaCompras from "../components/Compras/TablaCompras";
-import CuadroBusquedas from "../components/Busquedas/CuadroBusquedas";
+import ModalRegistroCompra from "../components/Compras/ModalRegistroCompra";
+import ModalEditarCompra from "../components/Compras/ModalEditarCompra";
+import ModalEliminarCompra from "../components/Compras/ModalEliminarCompra";
 
 const Compras = () => {
-  // Datos de ejemplo
-  const comprasOriginales = [
-    {
-      ID_Compra: 1,
-      Fecha_Compra: "2025-03-15",
-      Proveedor_Nombre: "Editorial Norma",
-      Empleado_Nombre: "Ana Gómez",
-      Total_Compra: 125000.50
-    },
-    {
-      ID_Compra: 2,
-      Fecha_Compra: "2025-03-20",
-      Proveedor_Nombre: "Librería Nacional",
-      Empleado_Nombre: "Luis Pérez",
-      Total_Compra: 98000.00
-    },
-    {
-      ID_Compra: 3,
-      Fecha_Compra: "2025-04-01",
-      Proveedor_Nombre: "Distribuidora Sur",
-      Empleado_Nombre: "Ana Gómez",
-      Total_Compra: 210000.75
+  const [compras, setCompras] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  // Modals control
+  const [showRegistro, setShowRegistro] = useState(false);
+  const [showEditar, setShowEditar] = useState(false);
+  const [showEliminar, setShowEliminar] = useState(false);
+
+  const [compraSeleccionada, setCompraSeleccionada] = useState(null);
+
+  // Obtener compras desde API
+  const obtenerCompras = async () => {
+    setCargando(true);
+    try {
+      const res = await fetch("http://localhost:3000/api/compras");
+      if (!res.ok) throw new Error("Error al cargar compras");
+      const data = await res.json();
+      setCompras(data);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setCargando(false);
     }
-  ];
-
-  // Estado para búsqueda
-  const [textoBusqueda, setTextoBusqueda] = useState("");
-
-  // Función de manejo
-  const manejarCambioBusqueda = (e) => {
-    setTextoBusqueda(e.target.value);
   };
 
-  // Filtrar compras
-  const comprasFiltradas = comprasOriginales.filter(compra =>
-    compra.ID_Compra.toString().includes(textoBusqueda) ||
-    compra.Proveedor_Nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
-    compra.Empleado_Nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
-    compra.Fecha_Compra.includes(textoBusqueda)
-  );
+  useEffect(() => {
+    obtenerCompras();
+  }, []);
+
+  // Guardar compra
+  const guardarCompra = async (nuevaCompra) => {
+    try {
+      const res = await fetch("http://localhost:3000/api/compras", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nuevaCompra),
+      });
+      if (!res.ok) throw new Error("Error al guardar compra");
+      setShowRegistro(false);
+      obtenerCompras();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  // Actualizar compra
+  const actualizarCompra = async (compraActualizada) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/compras/${compraSeleccionada.ID_Compra}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(compraActualizada),
+        }
+      );
+      if (!res.ok) throw new Error("Error al actualizar compra");
+      setShowEditar(false);
+      setCompraSeleccionada(null);
+      obtenerCompras();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  // Eliminar compra
+  const eliminarCompra = async (id) => {
+    if (!window.confirm("¿Está seguro de eliminar esta compra?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/compras/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Error al eliminar compra");
+      setShowEliminar(false);
+      setCompraSeleccionada(null);
+      obtenerCompras();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   return (
     <Container className="mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="text-primary fw-bold">Gestión de Compras</h2>
-        <Button variant="success">+ Nueva Compra</Button>
-      </div>
+      <h2 className="mb-4">Compras</h2>
+      <Button variant="primary" onClick={() => setShowRegistro(true)} className="mb-3">
+        + Nueva Compra
+      </Button>
 
-      {/* Cuadro de búsqueda */}
-      <CuadroBusquedas
-        textoBusqueda={textoBusqueda}
-        manejarCambioBusqueda={manejarCambioBusqueda}
+      <TablaCompras
+        compras={compras}
+        cargando={cargando}
+        onEditar={(compra) => {
+          setCompraSeleccionada(compra);
+          setShowEditar(true);
+        }}
+        onEliminar={(id) => {
+          setCompraSeleccionada(compras.find((c) => c.ID_Compra === id));
+          setShowEliminar(true);
+        }}
       />
 
-      {/* Tabla con datos filtrados */}
-      <TablaCompras compras={comprasFiltradas} cargando={false} />
+      {/* Modales */}
+      <ModalRegistroCompra
+        show={showRegistro}
+        onHide={() => setShowRegistro(false)}
+        onGuardar={guardarCompra}
+      />
+
+      <ModalEditarCompra
+        show={showEditar}
+        onHide={() => {
+          setShowEditar(false);
+          setCompraSeleccionada(null);
+        }}
+        compra={compraSeleccionada}
+        onActualizar={actualizarCompra}
+      />
+
+      <ModalEliminarCompra
+        show={showEliminar}
+        onHide={() => {
+          setShowEliminar(false);
+          setCompraSeleccionada(null);
+        }}
+        compra={compraSeleccionada}
+        onConfirmar={eliminarCompra}
+      />
     </Container>
   );
 };

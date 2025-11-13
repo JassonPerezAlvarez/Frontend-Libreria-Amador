@@ -1,13 +1,12 @@
-// src/components/Compras/TablaCompras.jsx
-import { Table, Spinner, Button } from "react-bootstrap";
+import React from "react";
+import { Table, Button, Spinner } from "react-bootstrap";
 
-const TablaCompras = ({ compras, cargando }) => {
+const TablaCompras = ({ compras, cargando, onEditar, onEliminar }) => {
   if (cargando) {
     return (
       <div className="text-center my-5">
-        <Spinner animation="border" variant="primary">
-          <span className="visually-hidden">Cargando compras...</span>
-        </Spinner>
+        <Spinner animation="border" variant="primary" />
+        <span className="visually-hidden">Cargando compras...</span>
       </div>
     );
   }
@@ -21,25 +20,33 @@ const TablaCompras = ({ compras, cargando }) => {
       <thead className="table-primary">
         <tr>
           <th>ID Compra</th>
-          <th>Fecha</th>
-          <th>Proveedor</th>
-          <th>Empleado</th>
-          <th>Total</th>
+          <th>Fecha Compra</th>
+          <th>ID Proveedor</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
-        {compras.map((c) => (
-          <tr key={c.ID_Compra}>
-            <td className="fw-bold">{c.ID_Compra}</td>
-            <td>{new Date(c.Fecha_Compra).toLocaleDateString()}</td>
-            <td>{c.Proveedor_Nombre || "-"}</td>
-            <td>{c.Empleado_Nombre || "-"}</td>
-            <td className="text-end">${parseFloat(c.Total_Compra).toFixed(2)}</td>
+        {compras.map((compra) => (
+          <tr key={compra.ID_Compra}>
+            <td>{compra.ID_Compra}</td>
+            <td>{new Date(compra.Fecha_Compra).toLocaleDateString()}</td>
+            <td>{compra.ID_Proveedor}</td>
             <td className="text-center">
-              <Button variant="outline-info" size="sm" className="me-1">Ver</Button>
-              <Button variant="outline-warning" size="sm" className="me-1">Editar</Button>
-              <Button variant="outline-danger" size="sm">Eliminar</Button>
+              <Button
+                variant="outline-warning"
+                size="sm"
+                className="me-2"
+                onClick={() => onEditar(compra)}
+              >
+                Editar
+              </Button>
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={() => onEliminar(compra.ID_Compra)}
+              >
+                Eliminar
+              </Button>
             </td>
           </tr>
         ))}
