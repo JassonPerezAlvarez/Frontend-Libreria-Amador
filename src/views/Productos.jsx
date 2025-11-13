@@ -1,61 +1,18 @@
 import { useState, useEffect } from "react";
 import { Container, Col, Row, Button } from "react-bootstrap";
 import TablaProductos from "../components/productos/TablaProductos";
-import ModalEdicionProducto from "../components/productos/ModalEdicionProducto.jsx";
-import ModalEliminacionProducto from "../components/productos/ModalEliminacionProducto";
-import CuadroBusquedas from "../components/busquedas/CuadroBusquedas.jsx";
 import ModalRegistroProducto from "../components/productos/ModalRegistroProducto";
+import CuadroBusquedas from "../components/busquedas/CuadroBusquedas.jsx";
 
 const Productos = () => {
-  const [productos, setproductos] = useState([]);
+  const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
-
   const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const elementosPorPagina = 5;
 
-  const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
-  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
-
-  const [paginaActual, establecerPaginaActual] = useState(1);
-  const elementosPorPagina = 5; // Número de productos por página
-
-  const [productoEditado, setProductoEditado] = useState(null);
-  const [productoAEliminar, setProductoAEliminar] = useState(null);
-
-  const obtenerProductos = async () => {
-    try {
-      const respuesta = await fetch("http://localhost:3000/api/obtenerProductos");
-      if (!respuesta.ok) {
-        throw new Error("Error al obtener los productos");
-      }
-
-      const datos = await respuesta.json();
-      setproductos(datos);
-      setProductosFiltrados(datos);
-      setCargando(false);
-    } catch (error) {
-      console.log(error.message);
-      setCargando(false);
-    }
-  };
-
-
-  const manejarCambioBusqueda = (e) => {
-    const texto = e.target.value.toLowerCase();
-    setTextoBusqueda(texto);
-    const filtrados = productos.filter(
-      (producto) =>
-        producto.Nombre.toLowerCase().includes(texto) ||
-        producto.Descripcion.toLowerCase().includes(texto) ||
-        producto.Cantidad== texto ||
-        producto.Precio_Comp == texto ||
-        producto.Precio_Vent == texto
-    );
-    setProductosFiltrados(filtrados);
-  };
-
-  // Estado y métodos para registro de producto (modal de creación)
-  const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarModalRegistro, setMostrarModalRegistro] = useState(false);
   const [nuevoProducto, setNuevoProducto] = useState({
     Nombre: "",
     Descripcion: "",
@@ -64,27 +21,63 @@ const Productos = () => {
     Precio_Vent: "",
   });
 
-  // Calcular productos paginadas
-  const productosPaginados = productosFiltrados.slice(
-  (paginaActual - 1) * elementosPorPagina,
-  paginaActual * elementosPorPagina
-  );
+  // CARGAR PRODUCTOS
+  const obtenerProductos = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/productos");
+      const data = await res.json();
 
-  const manejarCambioInput = (e) => {
-    const { name, value } = e.target;
-    setNuevoProducto((prev) => ({ ...prev, [name]: value }));
+      const normalizados = data.map(p => ({
+        id_producto: p.ID_Producto,
+        Nombre: p.Nombre,
+        Descripcion: p.Descripcion || "",
+        Cantidad: p.Cantidad || 0,
+        Precio_Comp: p.Precio_Comp || 0,
+        Precio_Vent: p.Precio_Vent || 0,
+      }));
+
+      setProductos(normalizados);
+      setProductosFiltrados(normalizados);
+    } catch (error) {
+      console.error("Error al cargar productos:", error);
+    } finally {
+      setCargando(false);
+    }
   };
 
+  useEffect(() => {
+    obtenerProductos();
+  }, []);
+
+  // BÚSQUEDA
+  const manejarCambioBusqueda = (e) => {
+    const texto = e.target.value.toLowerCase();
+    setTextoBusqueda(texto);
+    setPaginaActual(1);
+
+    const filtrados = productos.filter(p =>
+      p.Nombre?.toLowerCase().includes(texto) ||
+      p.Descripcion?.toLowerCase().includes(texto)
+    );
+    setProductosFiltrados(filtrados);
+  };
+
+  // PAGINACIÓN
+  const productosPaginados = productosFiltrados.slice(
+    (paginaActual - 1) * elementosPorPagina,
+    paginaActual * elementosPorPagina
+  );
+
+  // REGISTRAR PRODUCTO
   const agregarProducto = async () => {
-    if (!nuevoProducto.Nombre.trim()) return;
     try {
-      const respuesta = await fetch("http://localhost:3000/api/registrarProductos", {
+      await fetch("http://localhost:3000/api/RegistrarProductos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nuevoProducto),
       });
-      if (!respuesta.ok) throw new Error("Error al guardar producto");
-      // Limpiar y cerrar
+
+      setMostrarModalRegistro(false);
       setNuevoProducto({
         Nombre: "",
         Descripcion: "",
@@ -92,122 +85,54 @@ const Productos = () => {
         Precio_Comp: "",
         Precio_Vent: "",
       });
-      setMostrarModal(false);
-      await obtenerProductos();
+      obtenerProductos(); // Recarga la lista
     } catch (error) {
-      console.error("Error al agregar producto:", error);
-      alert("No se pudo guardar el producto. Revisa la consola.");
+      console.error("Error al registrar producto:", error);
+      alert("No se pudo registrar el producto");
     }
   };
-
-  const abrirModalEdicion = (producto) => {
-    setProductoEditado({ ...producto });
-    setMostrarModalEdicion(true);
-  };
-
-  const guardarEdicion = async () => {
-    if (!productoEditado.Nombre.trim()) return;
-    try {
-      const respuesta = await fetch(
-        `http://localhost:3000/api/actualizarProductoPatch/${productoEditado.id_producto}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(productoEditado),
-        }
-      );
-      if (!respuesta.ok) throw new Error("Error al actualizar producto");
-      setMostrarModalEdicion(false);
-      await obtenerProductos();
-    } catch (error) {
-      console.error("Error al editar producto:", error);
-      alert("No se pudo actualizar el producto.");
-    }
-  };
-
-  const abrirModalEliminacion = (producto) => {
-    setProductoAEliminar(producto);
-    setMostrarModalEliminar(true);
-  };
-
-  const confirmarEliminacion = async () => {
-    try {
-      const respuesta = await fetch(
-        `http://localhost:3000/api/eliminarProducto/${productoAEliminar.id_producto}`,
-        {
-          method: "DELETE",
-        }
-      );
-      if (!respuesta.ok) throw new Error("Error al eliminar producto");
-      setMostrarModalEliminar(false);
-      setProductoAEliminar(null);
-      await obtenerProductos();
-    } catch (error) {
-      console.error("Error al eliminar producto:", error);
-      alert("No se pudo eliminar el producto.");
-    }
-  };
-
-
-
-  useEffect(() => {
-    obtenerProductos();
-  }, []);
-
-  
 
   return (
-    <>
-      <Container className="mt-4">
-        <h4>Productos</h4>
-        <Row>
-          <Col lg={5} md={8} sm={8} xs={7}>
-            <CuadroBusquedas
-              textoBusqueda={textoBusqueda}
-              manejarCambioBusqueda={manejarCambioBusqueda}
-            />
-          </Col>
-          <Col className="text-end">
-            <Button className="color-boton-registro" onClick={() => setMostrarModal(true)}>
-              + Nuevo Producto
-            </Button>
-          </Col>
-        </Row>
-        <TablaProductos
-          productos={productosFiltrados}
-          cargando={cargando}
-          abrirModalEdicion={abrirModalEdicion}
-          abrirModalEliminacion={abrirModalEliminacion}
-          totalElementos={productos.length} // Total de categorias
-          elementosPorPagina={elementosPorPagina} // Elementos por página
-          paginaActual={paginaActual} // Página actual
-          establecerPaginaActual={establecerPaginaActual} // Método para cambiar página
-        />
+    <Container className="mt-4">
+      <h4>Productos</h4>
 
-        <ModalRegistroProducto
-          mostrarModal={mostrarModal}
-          setMostrarModal={setMostrarModal}
-          nuevoProducto={nuevoProducto}
-          manejarCambioInput={manejarCambioInput}
-          agregarProducto={agregarProducto}
-        />
+      <Row className="mb-3 align-items-center">
+        <Col lg={5} md={8}>
+          <CuadroBusquedas
+            textoBusqueda={textoBusqueda}
+            manejarCambioBusqueda={manejarCambioBusqueda}
+          />
+        </Col>
+        <Col className="text-end">
+          <Button
+            className="color-boton-registro"
+            onClick={() => setMostrarModalRegistro(true)}
+          >
+            + Nuevo Producto
+          </Button>
+        </Col>
+      </Row>
 
-        <ModalEdicionProducto
-          mostrar={mostrarModalEdicion}
-          setMostrar={setMostrarModalEdicion}
-          productoEditado={productoEditado}
-          setProductoEditado={setProductoEditado}
-          guardarEdicion={guardarEdicion}
-        />
+      <TablaProductos
+        productos={productosPaginados}
+        cargando={cargando}
+        totalElementos={productosFiltrados.length}
+        elementosPorPagina={elementosPorPagina}
+        paginaActual={paginaActual}
+        establecerPaginaActual={setPaginaActual}
+      />
 
-        <ModalEliminacionProducto
-          mostrar={mostrarModalEliminar}
-          setMostrar={setMostrarModalEliminar}
-          producto={productoAEliminar}
-          confirmarEliminacion={confirmarEliminacion}
-        />
-      </Container>
-    </>
+      <ModalRegistroProducto
+        mostrarModal={mostrarModalRegistro}
+        setMostrarModal={setMostrarModalRegistro}
+        nuevoProducto={nuevoProducto}
+        manejarCambioInput={(e) =>
+          setNuevoProducto({ ...nuevoProducto, [e.target.name]: e.target.value })
+        }
+        agregarProducto={agregarProducto}
+      />
+    </Container>
   );
 };
+
 export default Productos;

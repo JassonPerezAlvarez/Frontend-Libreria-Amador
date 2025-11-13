@@ -3,17 +3,18 @@ import { useState } from "react";
 import BotonOrden from "../ordenamiento/BotonOrden";
 import Paginacion from "../ordenamiento/Paginacion";
 
-
-const TablaProductos = ({ productos,
-  cargando, 
+const TablaProductos = ({
+  productos,
+  cargando,
   abrirModalEdicion,
   abrirModalEliminacion,
   totalElementos,
   elementosPorPagina,
   paginaActual,
-  establecerPaginaActual }) => {
+  establecerPaginaActual
+}) => {
 
-  const [orden, setOrden] = useState({ campo: "ID_Producto", direccion: "asc" });
+  const [orden, setOrden] = useState({ campo: "id_producto", direccion: "asc" });
 
   const manejarOrden = (campo) => {
     setOrden((prev) => ({
@@ -22,93 +23,90 @@ const TablaProductos = ({ productos,
     }));
   };
 
+  // Ordenamos una copia del array
   const productosOrdenados = [...productos].sort((a, b) => {
-    const valorA = a[orden.campo];
-    const valorB = b[orden.campo];
+    const valorA = a[orden.campo] ?? "";
+    const valorB = b[orden.campo] ?? "";
 
     if (typeof valorA === "number" && typeof valorB === "number") {
       return orden.direccion === "asc" ? valorA - valorB : valorB - valorA;
     }
 
-    const comparacion = String(valorA ?? "").localeCompare(String(valorB ?? ""));
+    const comparacion = String(valorA).localeCompare(String(valorB));
     return orden.direccion === "asc" ? comparacion : -comparacion;
   });
 
   if (cargando) {
     return (
-      <>
-        <Spinner animation="border">
-          <span className="visually-hidden">Cargando...</span>
-        </Spinner>
-      </>
+      <div className="text-center my-5">
+        <Spinner animation="border" />
+        <span className="ms-2">Cargando productos...</span>
+      </div>
     );
+  }
+
+  if (productos.length === 0) {
+    return <p className="text-center">No hay productos registrados.</p>;
   }
 
   return (
     <>
-      <Table striped bordered hover>
-        <thead>
+      <Table striped bordered hover responsive>
+        <thead className="table-dark">
           <tr>
-            <BotonOrden campo="ID_Producto" orden={orden} manejarOrden={manejarOrden}>
+            <BotonOrden campo="id_producto" orden={orden} manejarOrden={manejarOrden}>
               ID
             </BotonOrden>
-
             <BotonOrden campo="Nombre" orden={orden} manejarOrden={manejarOrden}>
               Nombre
             </BotonOrden>
-
             <BotonOrden campo="Descripcion" orden={orden} manejarOrden={manejarOrden}>
-              Descripcion
+              Descripción
             </BotonOrden>
-
             <BotonOrden campo="Cantidad" orden={orden} manejarOrden={manejarOrden}>
-              Categoria
-            </BotonOrden>
-
-            <BotonOrden campo="Precio_Comp" orden={orden} manejarOrden={manejarOrden}>
-              Precio
-            </BotonOrden>
-
-            <BotonOrden campo="Precio_Vent" orden={orden} manejarOrden={manejarOrden}>
               Stock
             </BotonOrden>
-
-            <th>Acciones</th>
+            <BotonOrden campo="Precio_Comp" orden={orden} manejarOrden={manejarOrden}>
+              Precio Compra
+            </BotonOrden>
+            <BotonOrden campo="Precio_Vent" orden={orden} manejarOrden={manejarOrden}>
+              Precio Venta
+            </BotonOrden>
+            <th className="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {productosOrdenados.map((producto) => {
-            return (
-              <tr key={producto.ID_Producto}>
-                <td>{producto.ID_Producto}</td>
-                <td>{producto.Nombre}</td>
-                <td>{producto.Descripcion}</td>
-                <td>{producto.Cantidad}</td>
-                <td>{producto.Precio_Comp}</td>
-                <td>{producto.Precio_Vent}</td>
-                <td>
-                  <Button
-                    variant="outline-warning"
-                    size="sm"
-                    className="me-2"
-                    onClick={() => abrirModalEdicion && abrirModalEdicion(producto)}
-                  >
-                    <i className="bi bi-pencil"></i>
-                  </Button>
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    onClick={() => abrirModalEliminacion && abrirModalEliminacion(producto)}
-                  >
-                    <i className="bi bi-trash"></i>
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
+          {productosOrdenados.map((producto) => (
+            <tr key={producto.id_producto}>
+              <td>{producto.id_producto}</td>
+              <td>{producto.Nombre}</td>
+              <td>{producto.Descripcion}</td>
+              <td>{producto.Cantidad}</td>
+              <td>{producto.Precio_Comp}</td>
+              <td>{producto.Precio_Vent}</td>
+              <td className="text-center">
+                <Button
+                  variant="outline-warning"
+                  size="sm"
+                  className="me-2"
+                  onClick={() => abrirModalEdicion(producto)}
+                >
+                  Editar
+                </Button>
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => abrirModalEliminacion(producto)}
+                >
+                  Eliminar
+                </Button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </Table>
-       <Paginacion
+
+      <Paginacion
         elementosPorPagina={elementosPorPagina}
         totalElementos={totalElementos}
         paginaActual={paginaActual}
