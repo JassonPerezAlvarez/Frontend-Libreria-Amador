@@ -1,52 +1,30 @@
-// src/components/Navegacion/Encabezado.jsx
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Container, Navbar, Nav } from "react-bootstrap";
+import { Navbar, Nav, Container } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
 
 const Encabezado = () => {
-  const navigate = useNavigate();
-
-  const irA = (ruta) => {
-    navigate(ruta);
-  };
-
   return (
-    <Navbar bg="primary" variant="dark" expand="lg" fixed="top" className="shadow-sm">
+    <Navbar bg="primary" variant="dark" expand="lg" sticky="top" className="shadow-sm">
       <Container>
-        {/* NOMBRE DE TU LIBRERÍA */}
-        <Navbar.Brand
-          onClick={() => irA("/inicio")}
-          style={{ cursor: "pointer", fontWeight: "bold", fontSize: "1.5rem" }}
-        >
-          Librería Amador
+        <Navbar.Brand as={NavLink} to="/inicio" className="fw-bold">
+          Librería Central
         </Navbar.Brand>
-
-        <Navbar.Toggle aria-controls="menu-horizontal" />
-
-        <Navbar.Collapse id="menu-horizontal">
-          <Nav className="ms-auto gap-2">
-            <Nav.Link onClick={() => irA("/inicio")} className="text-white fw-medium">
-              Inicio
-            </Nav.Link>
-            <Nav.Link onClick={() => irA("/productos")} className="text-white fw-medium">
-              Productos
-            </Nav.Link>
-            <Nav.Link onClick={() => irA("/clientes")} className="text-white fw-medium">
-              Clientes
-            </Nav.Link>
-            <Nav.Link onClick={() => irA("/proveedores")} className="text-white fw-medium">
-              Proveedores
-            </Nav.Link>
-            <Nav.Link onClick={() => irA("/usuarios")} className="text-white fw-medium">
-              Usuarios
-            </Nav.Link>
-            <Nav.Link onClick={() => irA("/ventas")} className="text-white fw-medium">
-              Ventas
-            </Nav.Link>
-            <Nav.Link onClick={() => irA("/compras")} className="text-white fw-medium">
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="me-auto">
+            <Nav.Link as={NavLink} to="/inicio" end>Inicio</Nav.Link>
+            <Nav.Link as={NavLink} to="/usuarios" end>Usuarios</Nav.Link>
+            <Nav.Link as={NavLink} to="/clientes" end>Clientes</Nav.Link>
+            <Nav.Link as={NavLink} to="/proveedores" end>Proveedores</Nav.Link>
+            <Nav.Link as={NavLink} to="/productos" end>Productos</Nav.Link>
+            <Nav.Link as={NavLink} to="/compras" end className="text-warning fw-bold">
               Compras
             </Nav.Link>
-          
+            <Nav.Link as={NavLink} to="/ventas" end>Ventas</Nav.Link>
+          </Nav>
+          <Nav>
+            <Nav.Link as={NavLink} to="/login" end className="text-light">
+              Cerrar Sesión
+            </Nav.Link>
           </Nav>
         </Navbar.Collapse>
       </Container>

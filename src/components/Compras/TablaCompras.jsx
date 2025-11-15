@@ -1,12 +1,11 @@
-// src/components/Compras/TablaCompras.jsx
 import { Table, Spinner, Button } from "react-bootstrap";
 
-const TablaCompras = ({ compras, cargando }) => {
+const TablaCompras = ({ compras, cargando, onVerDetalle, onEditar, onEliminar }) => {
   if (cargando) {
     return (
       <div className="text-center my-5">
         <Spinner animation="border" variant="primary">
-          <span className="visually-hidden">Cargando compras...</span>
+          <span className="visually-hidden">Cargando...</span>
         </Spinner>
       </div>
     );
@@ -18,12 +17,11 @@ const TablaCompras = ({ compras, cargando }) => {
 
   return (
     <Table striped bordered hover responsive className="shadow-sm">
-      <thead className="table-primary">
+      <thead className="table-success">
         <tr>
-          <th>ID Compra</th>
+          <th>ID</th>
           <th>Fecha</th>
           <th>Proveedor</th>
-          <th>Empleado</th>
           <th>Total</th>
           <th>Acciones</th>
         </tr>
@@ -33,13 +31,18 @@ const TablaCompras = ({ compras, cargando }) => {
           <tr key={c.ID_Compra}>
             <td className="fw-bold">{c.ID_Compra}</td>
             <td>{new Date(c.Fecha_Compra).toLocaleDateString()}</td>
-            <td>{c.Proveedor_Nombre || "-"}</td>
-            <td>{c.Empleado_Nombre || "-"}</td>
-            <td className="text-end">${parseFloat(c.Total_Compra).toFixed(2)}</td>
+            <td>{c.Proveedor}</td>
+            <td>${c.Total_Compra?.toFixed(2)}</td>
             <td className="text-center">
-              <Button variant="outline-info" size="sm" className="me-1">Ver</Button>
-              <Button variant="outline-warning" size="sm" className="me-1">Editar</Button>
-              <Button variant="outline-danger" size="sm">Eliminar</Button>
+              <Button variant="outline-info" size="sm" className="me-1" onClick={() => onVerDetalle(c)}>
+                Ver
+              </Button>
+              <Button variant="outline-warning" size="sm" className="me-1" onClick={onEditar}>
+                Editar
+              </Button>
+              <Button variant="outline-danger" size="sm" onClick={() => onEliminar(c.ID_Compra)}>
+                Eliminar
+              </Button>
             </td>
           </tr>
         ))}
