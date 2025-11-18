@@ -5,6 +5,9 @@ import ModalRegistroProducto from "../components/productos/ModalRegistroProducto
 import CuadroBusquedas from "../components/busquedas/CuadroBusquedas.jsx";
 import ModalEdicionProducto from "../components/productos/ModalEdicionProducto.jsx";
 import ModalEliminacionProducto from "../components/productos/ModalEliminacionProducto.jsx";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+
 
 const Productos = () => {
   const [productos, setProductos] = useState([]);
@@ -52,10 +55,6 @@ const Productos = () => {
       setCargando(false);
     }
   };
-
-  useEffect(() => {
-    obtenerProductos();
-  }, []);
 
   // BÚSQUEDA
   const manejarCambioBusqueda = (e) => {
@@ -149,7 +148,83 @@ const Productos = () => {
     }
   };
 
+  const generarPDFProductos = () => {
+    const doc = new jsPDF();
+
+    doc.setFillColor(28, 41, 51);
+    doc.rect(0, 0, 220, 30, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.text(
+      "Lista de Productos",
+      doc.internal.pageSize.getWidth() / 2,
+      18,
+      { align: "center" }
+    );
+
+    // Usar los mismos campos que muestra la tabla de productos
+    const columnas = ["ID", "Nombre", "Descripción", "Stock", "Precio Compra", "Precio Venta"];
+    const filas = productosFiltrados.map((producto) => {
+      const id = producto.id_producto ?? "";
+      const nombre = producto.Nombre ?? "";
+      const descripcion = producto.Descripcion ?? "";
+      const stock = producto.Cantidad ?? 0;
+      const precioCompra = `C$ ${Number(producto.Precio_Comp ?? 0).toFixed(2)}`;
+      const precioVenta = `C$ ${Number(producto.Precio_Vent ?? 0).toFixed(2)}`;
+      return [id, nombre, descripcion, stock, precioCompra, precioVenta];
+    });
+
+    const totalPaginas = "{total_pages_count_string}";
+
+    autoTable(doc, {
+      head: [columnas],
+      body: filas,
+      startY: 40,
+      theme: "grid",
+      styles: { fontSize: 10, cellPadding: 2 },
+      margin: { top: 20, left: 14, right: 14 },
+      tableWidth: "auto",
+      columnStyles: {
+        0: { cellWidth: "auto" },
+        1: { cellWidth: "auto" },
+        2: { cellWidth: "auto" },
+      },
+      pageBreak: "auto",
+      rowPageBreak: "auto",
+      didDrawPage: function (data) {
+        const alturaPagina = doc.internal.pageSize.getHeight();
+        const anchoPagina = doc.internal.pageSize.getWidth();
+
+        const numeroPagina = doc.internal.getNumberOfPages();
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        const piePagina = `Página ${numeroPagina} de ${totalPaginas}`;
+        doc.text(piePagina, anchoPagina / 2 + 15, alturaPagina - 10, { align: "center" });
+      },
+    });
+
+    if (typeof doc.putTotalPages === "function") {
+      doc.putTotalPages(totalPaginas);
+    }
+
+    const fecha = new Date();
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const anio = fecha.getFullYear();
+    const nombreArchivo = `productos_${dia}${mes}${anio}.pdf`;
+    doc.save(nombreArchivo);
+  };
+
+  useEffect(() => {
+    obtenerProductos();
+  }, []);
+
+  
+
   return (
+  <>
     <Container className="mt-4">
       <h4>Productos</h4>
 
@@ -206,6 +281,17 @@ const Productos = () => {
           confirmarEliminacion={confirmarEliminacion}
         />
     </Container>
+    <Col lg={3} md={4} sm={4} xs={5} >
+        <Button
+          className="mb-3"
+          onClick={generarPDFProductos}
+          variant="secondary"
+          style={{ width: '100%' }}
+        >
+          Generar PDF
+        </Button>
+      </Col>
+    </>
   );
 };
 

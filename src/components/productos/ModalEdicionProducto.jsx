@@ -26,12 +26,12 @@ const ModalEdicionProducto = ({
         <Form>
           <Row>
             <Col md={6} className="mb-3">
-              <Form.Group controlId="nombreProducto">
+              <Form.Group controlId="Nombre">
                 <Form.Label>Nombre</Form.Label>
                 <Form.Control
                   type="text"
-                  name="nombre_producto"
-                  value={productoEditado?.nombre_producto}
+                  name="Nombre"
+                  value={productoEditado?.Nombre ?? ""}
                   onChange={manejarCambio}
                   placeholder="Nombre del producto"
                   maxLength={100}
@@ -42,62 +42,62 @@ const ModalEdicionProducto = ({
             </Col>
             <Col md={6} className="mb-3">
               <Form.Group controlId="Descripcion">
-                <Form.Label>Descripcion</Form.Label>
+                <Form.Label>Descripción</Form.Label>
                 <Form.Control
-                  type="text"
+                  as="textarea"
+                  rows={2}
                   name="Descripcion"
-                  value={productoEditado?.DesDescripcion}
+                  value={productoEditado?.Descripcion ?? ""}
                   onChange={manejarCambio}
-                  placeholder="Descripcion"
+                  placeholder="Descripción"
+                  maxLength={300}
                 />
               </Form.Group>
             </Col>
           </Row>
-
-          <Form.Group className="mb-3" controlId="Cantidad">
-            <Form.Label>Cantidad</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={2}
-              name="Cantidad"
-              value={productoEditado?.Cantidad}
-              onChange={manejarCambio}
-              placeholder="Cantidad"
-              maxLength={300}
-            />
-          </Form.Group>
 
           <Row>
             <Col md={4} className="mb-3">
+              <Form.Group controlId="Cantidad">
+                <Form.Label>Cantidad</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="Cantidad"
+                  value={productoEditado?.Cantidad ?? 0}
+                  onChange={manejarCambio}
+                  placeholder="0"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col md={4} className="mb-3">
               <Form.Group controlId="Precio_Comp">
-                <Form.Label>Precio_Comp</Form.Label>
+                <Form.Label>Precio Compra</Form.Label>
                 <Form.Control
                   type="number"
                   name="Precio_Comp"
-                  value={productoEditado?.Precio_Comp}
+                  value={productoEditado?.Precio_Comp ?? 0}
                   onChange={manejarCambio}
                   placeholder="0.00"
                   step="0.01"
                 />
               </Form.Group>
-            
             </Col>
-          </Row>
-          <Col md={4} className="mb-3">
+
+            <Col md={4} className="mb-3">
               <Form.Group controlId="Precio_Vent">
-                <Form.Label>Precio_Vent</Form.Label>
+                <Form.Label>Precio Venta</Form.Label>
                 <Form.Control
                   type="number"
                   name="Precio_Vent"
-                  value={productoEditado?.Precio_Vent}
+                  value={productoEditado?.Precio_Vent ?? 0}
                   onChange={manejarCambio}
                   placeholder="0.00"
                   step="0.01"
                 />
               </Form.Group>
-            
             </Col>
-            
+          </Row>
         </Form>
       </Modal.Body>
       <Modal.Footer>
@@ -107,7 +107,7 @@ const ModalEdicionProducto = ({
         <Button
           variant="primary"
           onClick={guardarEdicion}
-          disabled={!productoEditado?.nombre_producto?.trim()}
+          disabled={!productoEditado?.Nombre?.toString().trim()}
         >
           Guardar Cambios
         </Button>
