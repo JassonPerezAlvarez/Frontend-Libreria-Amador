@@ -1,131 +1,144 @@
-import React, { useState, useEffect } from "react";
-import { Container, Button } from "react-bootstrap";
-import TablaCompras from "../components/Compras/TablaCompras";
-import ModalRegistroCompra from "../components/Compras/ModalRegistroCompra";
-import ModalEditarCompra from "../components/Compras/ModalEditarCompra";
-import ModalEliminarCompra from "../components/Compras/ModalEliminarCompra";
+// src/views/Compras.jsx
+import { useState, useEffect } from "react";
+import { Container, Button, Row, Col, Alert } from "react-bootstrap";
+import axios from "axios";
+
+import TablaCompras from "../components/compras/TablaCompras";
+import CuadroBusquedas from "../components/busquedas/CuadroBusquedas";
+import ModalDetallesCompra from "../components/detalles_compras/ModalDetallesCompra";
+import ModalRegistroCompra from "../components/compras/ModalRegistroCompra";
+import ModalEdicionCompra from "../components/compras/ModalEdicionCompra";
+import ModalEliminacionCompra from "../components/compras/ModalEliminacionCompra";
 
 const Compras = () => {
   const [compras, setCompras] = useState([]);
+  const [comprasFiltradas, setComprasFiltradas] = useState([]);
   const [cargando, setCargando] = useState(true);
 
+  const [showDetalle, setShowDetalle] = useState(false);
   const [showRegistro, setShowRegistro] = useState(false);
-  const [showEditar, setShowEditar] = useState(false);
-  const [showEliminar, setShowEliminar] = useState(false);
-  const [compraSeleccionada, setCompraSeleccionada] = useState(null);
+  const [showEdicion, setShowEdicion] = useState(false);
+  const [showEliminacion, setShowEliminacion] = useState(false);
 
-  const obtenerCompras = async () => {
-    setCargando(true);
-    try {
-      const res = await fetch("http://localhost:3000/api/compras");
-      if (!res.ok) throw new Error("Error al cargar compras");
-      const data = await res.json();
-      setCompras(data);
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setCargando(false);
-    }
-  };
+  const [detallesCompra, setDetallesCompra] = useState([]);
+  const [compraSeleccionada, setCompraSeleccionada] = useState(null);
+  const [textoBusqueda, setTextoBusqueda] = useState("");
+
+  const API = "http://localhost:3000/api";
 
   useEffect(() => {
-    obtenerCompras();
+    const cargar = async () => {
+      try {
+        const res = await axios.get(`${API}/compras`);
+        const comprasCrudas = res.data;
+
+        const comprasListas = await Promise.all(
+          comprasCrudas.map(async (c) => {
+            // 1. ENCONTRAR EL ID (da igual cómo se llame)
+            const id =
+              c.ID_Compra || c.id_compra || c.idCompra || c.id || c._id || c.Id_Compra;
+
+            // 2. BUSCAR DETALLES (si falla, no pasa nada)
+            let detalles = [];
+            try {
+              const det = await axios.get(`${API}/compras/${id}/detalles`);
+              detalles = det.data;
+            } catch (e) {
+              console.log("No hay detalles para compra", id);
+            }
+
+            // 3. SI FALTA PROVEEDOR O TOTAL → LO BUSCAMOS (opcional, pero queda bonito)
+            let proveedor = c.Proveedor;
+            let total = c.Total_Compra;
+
+            if (!proveedor && c.ID_Proveedor) {
+              try {
+                const prov = await axios.get(`${API}/proveedores/${c.ID_Proveedor}`);
+                proveedor = `${prov.data.Primer_Nombre} ${prov.data.Primer_Apellido}`;
+              } catch {}
+            }
+
+            return {
+              ...c,
+              ID_Compra: id,
+              Proveedor: proveedor || "Proveedor no encontrado",
+              Total_Compra: total || 0,
+              detalles,
+            };
+          })
+        );
+
+        setCompras(comprasListas);
+        setComprasFiltradas(comprasListas);
+      } catch (err) {
+        console.error(err);
+        alert("ERROR: Backend apagado o ruta mala");
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargar();
   }, []);
 
-  const guardarCompra = async (nuevaCompra) => {
-    try {
-      const res = await fetch("http://localhost:3000/api/compras", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nuevaCompra),
-      });
-      if (!res.ok) throw new Error("Error al guardar compra");
-      setShowRegistro(false);
-      obtenerCompras();
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-
-  const actualizarCompra = async (compraActualizada) => {
-    try {
-      const res = await fetch(
-        `http://localhost:3000/api/compras/${compraSeleccionada.ID_Compra}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(compraActualizada),
-        }
+  // Búsqueda
+  useEffect(() => {
+    if (!textoBusqueda) {
+      setComprasFiltradas(compras);
+    } else {
+      setComprasFiltradas(
+        compras.filter((c) =>
+          c.ID_Compra?.toString().includes(textoBusqueda) ||
+          c.Proveedor?.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
+          c.Fecha_Compra?.includes(textoBusqueda)
+        )
       );
-      if (!res.ok) throw new Error("Error al actualizar compra");
-      setShowEditar(false);
-      setCompraSeleccionada(null);
-      obtenerCompras();
-    } catch (error) {
-      alert(error.message);
     }
-  };
-
-  const eliminarCompra = async (id) => {
-    if (!window.confirm("¿Está seguro de eliminar esta compra?")) return;
-    try {
-      const res = await fetch(`http://localhost:3000/api/compras/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Error al eliminar compra");
-      setShowEliminar(false);
-      setCompraSeleccionada(null);
-      obtenerCompras();
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+  }, [textoBusqueda, compras]);
 
   return (
     <Container className="mt-4">
-      <h2 className="mb-4">Compras</h2>
-      <Button variant="primary" onClick={() => setShowRegistro(true)} className="mb-3">
-        + Nueva Compra
-      </Button>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="text-success fw-bold">Gestión de Compras</h2>
+        <Button variant="success" size="lg" onClick={() => setShowRegistro(true)}>
+          + Nueva Compra
+        </Button>
+      </div>
 
-      <TablaCompras
-        compras={compras}
-        cargando={cargando}
-        onEditar={(compra) => {
-          setCompraSeleccionada(compra);
-          setShowEditar(true);
-        }}
-        onEliminar={(id) => {
-          setCompraSeleccionada(compras.find((c) => c.ID_Compra === id));
-          setShowEliminar(true);
-        }}
-      />
+      <Row className="mb-4">
+        <Col lg={6}>
+          <CuadroBusquedas
+            textoBusqueda={textoBusqueda}
+            manejarCambioBusqueda={(e) => setTextoBusqueda(e.target.value)}
+          />
+        </Col>
+      </Row>
 
-      <ModalRegistroCompra
-        show={showRegistro}
-        onHide={() => setShowRegistro(false)}
-        onGuardar={guardarCompra}
-      />
+      {cargando ? (
+        <Alert variant="info">Cargando compras...</Alert>
+      ) : (
+        <TablaCompras
+          compras={comprasFiltradas}
+          cargando={cargando}
+          onVerDetalle={(c) => {
+            setDetallesCompra(c.detalles);
+            setShowDetalle(true);
+          }}
+          onEditar={(c) => {
+            setCompraSeleccionada(c);
+            setShowEdicion(true);
+          }}
+          onEliminar={(c) => {
+            setCompraSeleccionada(c);
+            setShowEliminacion(true);
+          }}
+        />
+      )}
 
-      <ModalEditarCompra
-        show={showEditar}
-        onHide={() => {
-          setShowEditar(false);
-          setCompraSeleccionada(null);
-        }}
-        compra={compraSeleccionada}
-        onActualizar={actualizarCompra}
-      />
-
-      <ModalEliminarCompra
-        show={showEliminar}
-        onHide={() => {
-          setShowEliminar(false);
-          setCompraSeleccionada(null);
-        }}
-        compra={compraSeleccionada}
-        onConfirmar={eliminarCompra}
-      />
+      <ModalDetallesCompra mostrarModal={showDetalle} setMostrarModal={setShowDetalle} detalles={detallesCompra} />
+      <ModalRegistroCompra mostrar={showRegistro} setMostrar={setShowRegistro} />
+      <ModalEdicionCompra mostrar={showEdicion} setMostrar={setShowEdicion} compra={compraSeleccionada} />
+      <ModalEliminacionCompra mostrar={showEliminacion} setMostrar={setShowEliminacion} compra={compraSeleccionada} />
     </Container>
   );
 };

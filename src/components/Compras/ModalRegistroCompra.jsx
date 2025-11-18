@@ -1,54 +1,141 @@
-import React, { useState } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
+import { useState } from "react";
+import { Modal, Button, Form, Table, Row, Col } from 'react-bootstrap';
 
-const ModalRegistroCompra = ({ show, onHide, onGuardar }) => {
-  const [ID_Proveedor, setIDProveedor] = useState("");
-  const [Fecha_Compra, setFechaCompra] = useState("");
+const ModalRegistroCompra = ({ mostrar, setMostrar }) => {
+  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [proveedor, setProveedor] = useState('');
+  const [detalles, setDetalles] = useState([]);
+  const [productoInput, setProductoInput] = useState('');
+  const [cantidad, setCantidad] = useState('');
 
-  const manejarGuardar = () => {
-    if (!ID_Proveedor || !Fecha_Compra) {
-      alert("Por favor, complete todos los campos.");
+  // Productos simulados (en tu grupal puedes conectar al backend después)
+  const productosDisponibles = [
+    { id: 1, nombre: "Libro Matemáticas", precio: 10.50, stock: 100 },
+    { id: 2, nombre: "Lápiz HB", precio: 0.10, stock: 500 },
+    { id: 3, nombre: "Borrador", precio: 0.15, stock: 300 },
+  ];
+
+  const agregarProducto = () => {
+    if (!productoInput || !cantidad || cantidad <= 0) {
+      alert("Selecciona un producto y una cantidad válida");
       return;
     }
-    onGuardar({ ID_Proveedor, Fecha_Compra });
-    setIDProveedor("");
-    setFechaCompra("");
+
+    const producto = productosDisponibles.find(p => p.id === parseInt(productoInput));
+    if (!producto) return;
+
+    setDetalles([...detalles, {
+      nombre_producto: producto.nombre,
+      cantidad: parseInt(cantidad),
+      precio_unitario: producto.precio
+    }]);
+
+    setProductoInput('');
+    setCantidad('');
+  };
+
+  const total = detalles.reduce((sum, d) => sum + (d.cantidad * d.precio_unitario), 0);
+
+  const guardar = () => {
+    if (!proveedor || detalles.length === 0) {
+      alert("Debes ingresar proveedor y al menos un producto");
+      return;
+    }
+    alert(`Compra registrada por C$ ${total.toFixed(2)}`);
+    setMostrar(false);
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Registrar Compra</Modal.Title>
+    <Modal show={mostrar} onHide={() => setMostrar(false)} size="xl">
+      <Modal.Header closeButton className="bg-success text-white">
+        <Modal.Title>Nueva Compra</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <Form>
-          <Form.Group className="mb-3" controlId="formProveedor">
-            <Form.Label>ID Proveedor</Form.Label>
+        <Row className="mb-3">
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>Proveedor</Form.Label>
+              <Form.Control
+                type="text"
+                value={proveedor}
+                onChange={(e) => setProveedor(e.target.value)}
+                placeholder="Nombre del proveedor"
+              />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>Fecha</Form.Label>
+              <Form.Control type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <hr />
+        <h5>Agregar Producto</h5>
+        <Row className="mb-3">
+          <Col md={6}>
+            <Form.Select value={productoInput} onChange={(e) => setProductoInput(e.target.value)}>
+              <option value="">Seleccionar producto...</option>
+              {productosDisponibles.map(p => (
+                <option key={p.id} value={p.id}>{p.nombre} - C$ {p.precio}</option>
+              ))}
+            </Form.Select>
+          </Col>
+          <Col md={3}>
             <Form.Control
               type="number"
-              value={ID_Proveedor}
-              onChange={(e) => setIDProveedor(e.target.value)}
-              placeholder="Ingrese ID Proveedor"
+              placeholder="Cantidad"
+              value={cantidad}
+              onChange={(e) => setCantidad(e.target.value)}
+              min="1"
             />
-          </Form.Group>
+          </Col>
+          <Col md={3}>
+            <Button variant="success" onClick={agregarProducto} style={{width: '100%'}}>
+              Agregar
+            </Button>
+          </Col>
+        </Row>
 
-          <Form.Group className="mb-3" controlId="formFechaCompra">
-            <Form.Label>Fecha Compra</Form.Label>
-            <Form.Control
-              type="date"
-              value={Fecha_Compra}
-              onChange={(e) => setFechaCompra(e.target.value)}
-            />
-          </Form.Group>
-        </Form>
+        {detalles.length > 0 && (
+          <Table striped bordered className="mt-3">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {detalles.map((d, i) => (
+                <tr key={i}>
+                  <td>{d.nombre_producto}</td>
+                  <td>{d.cantidad}</td>
+                  <td>C$ {d.precio_unitario.toFixed(2)}</td>
+                  <td>C$ {(d.cantidad * d.precio_unitario).toFixed(2)}</td>
+                  <td>
+                    <Button size="sm" variant="danger" onClick={() => setDetalles(detalles.filter((_, idx) => idx !== i))}>
+                      X
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} className="text-end"><strong>Total:</strong></td>
+                <td colSpan={2}><strong>C$ {total.toFixed(2)}</strong></td>
+              </tr>
+            </tfoot>
+          </Table>
+        )}
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
-          Cancelar
-        </Button>
-        <Button variant="primary" onClick={manejarGuardar}>
-          Guardar
-        </Button>
+        <Button variant="secondary" onClick={() => setMostrar(false)}>Cancelar</Button>
+        <Button variant="success" onClick={guardar}>Guardar Compra</Button>
       </Modal.Footer>
     </Modal>
   );
