@@ -1,5 +1,5 @@
 // src/components/compras/TablaCompras.jsx
-import { Table, Spinner, Button } from "react-bootstrap";
+import { Table, Spinner, Button, Alert } from "react-bootstrap";
 
 const TablaCompras = ({ compras, cargando, onVerDetalle, onEditar, onEliminar }) => {
   if (cargando) {
@@ -32,7 +32,16 @@ const TablaCompras = ({ compras, cargando, onVerDetalle, onEditar, onEliminar })
             <td>{compra.ID_Compra}</td>
             <td>{compra.Fecha_Compra}</td>
             <td>{compra.Proveedor || "Sin proveedor"}</td>
-            <td>C$ {parseFloat(compra.Total_Compra || 0).toFixed(2)}</td>
+
+            {/* TOTAL CORREGIDO */}
+            <td>
+              C${" "}
+              {Number(compra.Total_Compra || 0).toLocaleString("es-NI", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </td>
+
             <td>
               <Button size="sm" variant="info" className="me-2" onClick={() => onVerDetalle(compra)}>
                 Ver
@@ -44,6 +53,7 @@ const TablaCompras = ({ compras, cargando, onVerDetalle, onEditar, onEliminar })
                 Eliminar
               </Button>
             </td>
+
           </tr>
         ))}
       </tbody>

@@ -3,101 +3,147 @@ import { useState, useEffect } from "react";
 import { Container, Button, Row, Col, Alert } from "react-bootstrap";
 import axios from "axios";
 
-import TablaCompras from "../components/compras/TablaCompras";
+import TablaCompras from "../components/Compras/TablaCompras";
 import CuadroBusquedas from "../components/busquedas/CuadroBusquedas";
 import ModalDetallesCompra from "../components/detalles_compras/ModalDetallesCompra";
-import ModalRegistroCompra from "../components/compras/ModalRegistroCompra";
-import ModalEdicionCompra from "../components/compras/ModalEdicionCompra";
-import ModalEliminacionCompra from "../components/compras/ModalEliminacionCompra";
+import ModalRegistroCompra from "../components/Compras/ModalRegistroCompra";
+import ModalEdicionCompra from "../components/Compras/ModalEdicionCompra";
+import ModalEliminacionCompra from "../components/Compras/ModalEliminacionCompra";
 
 const Compras = () => {
+  // Estados
   const [compras, setCompras] = useState([]);
   const [comprasFiltradas, setComprasFiltradas] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [textoBusqueda, setTextoBusqueda] = useState("");
 
+  // Modales
   const [showDetalle, setShowDetalle] = useState(false);
   const [showRegistro, setShowRegistro] = useState(false);
   const [showEdicion, setShowEdicion] = useState(false);
   const [showEliminacion, setShowEliminacion] = useState(false);
 
-  const [detallesCompra, setDetallesCompra] = useState([]);
+  // Datos seleccionados
   const [compraSeleccionada, setCompraSeleccionada] = useState(null);
-  const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [detallesParaMostrar, setDetallesParaMostrar] = useState([]);
 
-  const API = "http://localhost:3000/api";
+  const API = "/api";
 
+  // Cargar todas las compras al montar el componente
   useEffect(() => {
-    const cargar = async () => {
-      try {
-        const res = await axios.get(`${API}/compras`);
-        const comprasCrudas = res.data;
-
-        const comprasListas = await Promise.all(
-          comprasCrudas.map(async (c) => {
-            // 1. ENCONTRAR EL ID (da igual cómo se llame)
-            const id =
-              c.ID_Compra || c.id_compra || c.idCompra || c.id || c._id || c.Id_Compra;
-
-            // 2. BUSCAR DETALLES (si falla, no pasa nada)
-            let detalles = [];
-            try {
-              const det = await axios.get(`${API}/compras/${id}/detalles`);
-              detalles = det.data;
-            } catch (e) {
-              console.log("No hay detalles para compra", id);
-            }
-
-            // 3. SI FALTA PROVEEDOR O TOTAL → LO BUSCAMOS (opcional, pero queda bonito)
-            let proveedor = c.Proveedor;
-            let total = c.Total_Compra;
-
-            if (!proveedor && c.ID_Proveedor) {
-              try {
-                const prov = await axios.get(`${API}/proveedores/${c.ID_Proveedor}`);
-                proveedor = `${prov.data.Primer_Nombre} ${prov.data.Primer_Apellido}`;
-              } catch {}
-            }
-
-            return {
-              ...c,
-              ID_Compra: id,
-              Proveedor: proveedor || "Proveedor no encontrado",
-              Total_Compra: total || 0,
-              detalles,
-            };
-          })
-        );
-
-        setCompras(comprasListas);
-        setComprasFiltradas(comprasListas);
-      } catch (err) {
-        console.error(err);
-        alert("ERROR: Backend apagado o ruta mala");
-      } finally {
-        setCargando(false);
-      }
-    };
-
-    cargar();
+    cargarCompras();
   }, []);
 
-  // Búsqueda
+  // Filtrado por texto de búsqueda
   useEffect(() => {
-    if (!textoBusqueda) {
+    if (!textoBusqueda.trim()) {
       setComprasFiltradas(compras);
-    } else {
-      setComprasFiltradas(
-        compras.filter((c) =>
-          c.ID_Compra?.toString().includes(textoBusqueda) ||
-          c.Proveedor?.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
-          c.Fecha_Compra?.includes(textoBusqueda)
-        )
-      );
+      return;
     }
+
+    const texto = textoBusqueda.toLowerCase();
+    const filtradas = compras.filter((c) => {
+      return (
+        String(c.ID_Compra).includes(texto) ||
+        (c.Proveedor && c.Proveedor.toLowerCase().includes(texto)) ||
+        (c.Fecha_Compra && c.Fecha_Compra.includes(texto))
+      );
+    });
+
+    setComprasFiltradas(filtradas);
   }, [textoBusqueda, compras]);
+
+  // Función principal para cargar compras + sus detalles
+  const cargarCompras = async () => {
+    try {
+      setCargando(true);
+      const res = await axios.get(`${API}/compras`);
+      const comprasCrudas = res.data;
+
+      const comprasConDetalles = await Promise.all(
+        comprasCrudas.map(async (compra) => {
+          const id =
+            compra.ID_Compra || compra.id_compra || compra.Id_Compra || compra.id;
+
+          let detalles = [];
+          try {
+            const { data } = await axios.get(`${API}/compras/${id}/detalles`);
+            detalles = data || [];
+          } catch (err) {
+            console.warn(`No se pudieron cargar detalles de la compra ${id}`, err);
+          }
+// 🟢 TOTAL CORREGIDO - sin errores de sintaxis
+const totalCalculado = detalles.reduce((sum, d) => {
+  // Intentar primero obtener el subtotal directamente
+  let subtotal = d.Subtotal ?? d.subtotal;
+
+  // Si no existe Subtotal, calcular con cantidad y precio
+  if (subtotal == null) {
+    const cantidad = d.Cantidad ?? d.cantidad ?? 0;
+    const precio = d.Precio_Unitario ?? d.precioUnitario ?? 0;
+    subtotal = cantidad * precio;
+  }
+
+  return sum + subtotal;
+}, 0);
+
+
+          return {
+            ...compra,
+            ID_Compra: id,
+            detalles,
+            Total_Compra: compra.Total_Compra || totalCalculado,
+            Proveedor: compra.Proveedor || "Sin proveedor",
+            Fecha_Compra:
+              compra.Fecha_Compra?.split("T")[0] || compra.Fecha_Compra || "",
+          };
+        })
+      );
+
+      setCompras(comprasConDetalles);
+      setComprasFiltradas(comprasConDetalles);
+    } catch (err) {
+      console.error("Error cargando compras:", err);
+      alert("No se pudieron cargar las compras. Verifica el backend.");
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // Handlers
+  const handleNuevaCompra = (nuevaCompra) => {
+    setCompras((prev) => [...prev, nuevaCompra]);
+    setShowRegistro(false);
+  };
+
+  const handleActualizarCompra = (compraActualizada) => {
+    setCompras((prev) =>
+      prev.map((c) =>
+        c.ID_Compra === compraActualizada.ID_Compra ? compraActualizada : c
+      )
+    );
+    setShowEdicion(false);
+  };
+
+  const handleEliminarCompra = async () => {
+    if (!compraSeleccionada) return;
+
+    try {
+      await axios.delete(`${API}/compras/${compraSeleccionada.ID_Compra}`);
+      setCompras((prev) =>
+        prev.filter((c) => c.ID_Compra !== compraSeleccionada.ID_Compra)
+      );
+      setShowEliminacion(false);
+      setCompraSeleccionada(null);
+    } catch (err) {
+      console.error("Error al eliminar la compra:", err);
+      alert("Error al eliminar la compra");
+    }
+  };
 
   return (
     <Container className="mt-4">
+      {/* Encabezado */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-success fw-bold">Gestión de Compras</h2>
         <Button variant="success" size="lg" onClick={() => setShowRegistro(true)}>
@@ -105,6 +151,7 @@ const Compras = () => {
         </Button>
       </div>
 
+      {/* Buscador */}
       <Row className="mb-4">
         <Col lg={6}>
           <CuadroBusquedas
@@ -114,31 +161,59 @@ const Compras = () => {
         </Col>
       </Row>
 
+      {/* Estados de carga y tabla */}
       {cargando ? (
-        <Alert variant="info">Cargando compras...</Alert>
+        <Alert variant="info" className="text-center">
+          Cargando compras...
+        </Alert>
+      ) : compras.length === 0 ? (
+        <Alert variant="warning">No hay compras registradas aún.</Alert>
       ) : (
         <TablaCompras
           compras={comprasFiltradas}
-          cargando={cargando}
-          onVerDetalle={(c) => {
-            setDetallesCompra(c.detalles);
+          onVerDetalle={(compra) => {
+            setDetallesParaMostrar(compra.detalles);
+            setCompraSeleccionada(compra);
             setShowDetalle(true);
           }}
-          onEditar={(c) => {
-            setCompraSeleccionada(c);
+          onEditar={(compra) => {
+            setCompraSeleccionada(compra);
             setShowEdicion(true);
           }}
-          onEliminar={(c) => {
-            setCompraSeleccionada(c);
+          onEliminar={(compra) => {
+            setCompraSeleccionada(compra);
             setShowEliminacion(true);
           }}
         />
       )}
 
-      <ModalDetallesCompra mostrarModal={showDetalle} setMostrarModal={setShowDetalle} detalles={detallesCompra} />
-      <ModalRegistroCompra mostrar={showRegistro} setMostrar={setShowRegistro} />
-      <ModalEdicionCompra mostrar={showEdicion} setMostrar={setShowEdicion} compra={compraSeleccionada} />
-      <ModalEliminacionCompra mostrar={showEliminacion} setMostrar={setShowEliminacion} compra={compraSeleccionada} />
+      {/* Modales */}
+      <ModalDetallesCompra
+        mostrarModal={showDetalle}
+        setMostrarModal={setShowDetalle}
+        compra={compraSeleccionada}
+        detalles={detallesParaMostrar}
+      />
+
+      <ModalRegistroCompra
+        mostrar={showRegistro}
+        setMostrar={setShowRegistro}
+        onSuccess={handleNuevaCompra}
+      />
+
+      <ModalEdicionCompra
+        mostrar={showEdicion}
+        setMostrar={setShowEdicion}
+        compra={compraSeleccionada}
+        onUpdate={handleActualizarCompra}
+      />
+
+      <ModalEliminacionCompra
+        mostrar={showEliminacion}
+        setMostrar={setShowEliminacion}
+        compra={compraSeleccionada}
+        onConfirm={handleEliminarCompra}
+      />
     </Container>
   );
 };
