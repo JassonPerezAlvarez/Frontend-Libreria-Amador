@@ -78,8 +78,26 @@ const ModalRegistroProducto = ({
               name="Precio_Vent"
               value={nuevoProducto.Precio_Vent}
               onChange={manejarCambioInput}
-              placeholder="Descripción opcional (máx. 300 caracteres)"
-              maxLength={300}
+              placeholder="0"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3" controlId="formImagenProducto">
+            <Form.Label>Imagen</Form.Label>
+            <Form.Control
+              type="file"
+              name="imagen"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    manejarCambioInput({ target: { name: 'imagen', value: reader.result.split(',')[1] } });
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
             />
           </Form.Group>
         </Form>

@@ -14,7 +14,7 @@ const TablaProductos = ({
   establecerPaginaActual
 }) => {
 
-  const [orden, setOrden] = useState({ campo: "id_producto", direccion: "asc" });
+  const [orden, setOrden] = useState({ campo: "ID_Producto", direccion: "asc" });
 
   const manejarOrden = (campo) => {
     setOrden((prev) => ({
@@ -54,7 +54,7 @@ const TablaProductos = ({
       <Table striped bordered hover responsive>
         <thead className="table-dark">
           <tr>
-            <BotonOrden campo="id_producto" orden={orden} manejarOrden={manejarOrden}>
+            <BotonOrden campo="ID_Producto" orden={orden} manejarOrden={manejarOrden}>
               ID
             </BotonOrden>
             <BotonOrden campo="Nombre" orden={orden} manejarOrden={manejarOrden}>
@@ -72,19 +72,35 @@ const TablaProductos = ({
             <BotonOrden campo="Precio_Vent" orden={orden} manejarOrden={manejarOrden}>
               Precio Venta
             </BotonOrden>
+            <BotonOrden campo="imagen" orden={orden} manejarOrden={manejarOrden}>
+              Imagen
+            </BotonOrden>
             <th className="text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {productosOrdenados.map((producto) => (
-            <tr key={producto.id_producto}>
-              <td>{producto.id_producto}</td>
+            <tr key={producto.ID_Producto ?? producto.ID_Producto}>
+              <td>{producto.ID_Producto ?? producto.ID_Producto}</td>
               <td>{producto.Nombre}</td>
               <td>{producto.Descripcion}</td>
               <td>{producto.Cantidad}</td>
               <td>{producto.Precio_Comp}</td>
               <td>{producto.Precio_Vent}</td>
-              <td className="text-center">
+              <td>
+                  {producto.imagen ? (
+                    <img
+                      src={`data:image/png;base64,${producto.imagen}`}
+                      alt={producto.nombre_producto}
+                      width={50}
+                      height={50}
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    'Sin imagen'
+                  )}
+                </td>
+              <td>
                 <Button
                   variant="outline-warning"
                   size="sm"

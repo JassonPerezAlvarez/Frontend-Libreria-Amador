@@ -29,28 +29,28 @@ const Productos = () => {
     Cantidad: "",
     Precio_Comp: "",
     Precio_Vent: "",
+    imagen: "",
   });
 
-  // Cargar productos
   const obtenerProductos = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/productos");
-      const data = await res.json();
+      const respuesta = await fetch("http://localhost:3000/api/productos");
+      if (!respuesta.ok) {
+        throw new Error("Error al obtener los productos");
+      }
 
-      const normalizados = data.map((p) => ({
-        id_producto: p.ID_Producto,
-        Nombre: p.Nombre,
-        Descripcion: p.Descripcion || "",
-        Cantidad: p.Cantidad || 0,
-        Precio_Comp: p.Precio_Comp || 0,
-        Precio_Vent: p.Precio_Vent || 0,
+      const datos = await respuesta.json();
+      // Normalizar IDs: algunos endpoints devuelven `id_producto`, otros `ID_Producto`
+      const normalizados = datos.map((p) => ({
+        ...p,
+        ID_Producto: p.ID_Producto ?? p.id_producto,
+        id_producto: p.id_producto ?? p.ID_Producto,
       }));
-
       setProductos(normalizados);
       setProductosFiltrados(normalizados);
+      setCargando(false);
     } catch (error) {
-      console.error("Error al cargar productos:", error);
-    } finally {
+      console.log(error.message);
       setCargando(false);
     }
   };
@@ -78,7 +78,7 @@ const Productos = () => {
   // REGISTRAR
   const agregarProducto = async () => {
     try {
-      await fetch("http://localhost:3000/api/RegistrarProductos", {
+      await fetch("http://localhost:3000/api/registrarproducto", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nuevoProducto),
@@ -91,6 +91,7 @@ const Productos = () => {
         Cantidad: "",
         Precio_Comp: "",
         Precio_Vent: "",
+        imagen: "",
       });
       obtenerProductos();
     } catch (error) {
@@ -101,22 +102,51 @@ const Productos = () => {
 
   // Abrir modal edición
   const abrirModalEdicion = (producto) => {
-    setProductoEditado({ ...producto });
+    // Aseguramos que tenga ID_Producto
+    setProductoEditado({ ...producto, ID_Producto: producto.ID_Producto ?? producto.id_producto });
     setMostrarModalEdicion(true);
   };
 
   // Guardar edición
   const guardarEdicion = async () => {
     try {
-      await fetch(
-        `http://localhost:3000/api/ActualizarProducto/${productoEditado.id_producto}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(productoEditado),
-        }
-      );
+      // Log para depuración: revisar que productoEditado contenga la imagen en Base64
+      console.log('Enviando edición producto:', productoEditado);
+      // Si hay un File (imagenFile), enviamos FormData (multipart/form-data)
+      let response;
+      const idParaEnviar = productoEditado?.ID_Producto ?? productoEditado?.id_producto;
+      if (!idParaEnviar) throw new Error('ID de producto no definido');
 
+      if (productoEditado?.imagenFile) {
+        const fd = new FormData();
+        // Añadimos los campos del producto (ajusta nombres según tu backend)
+        fd.append('Nombre', productoEditado.Nombre ?? '');
+        fd.append('Descripcion', productoEditado.Descripcion ?? '');
+        fd.append('Cantidad', productoEditado.Cantidad ?? '0');
+        fd.append('Precio_Comp', productoEditado.Precio_Comp ?? '0');
+        fd.append('Precio_Vent', productoEditado.Precio_Vent ?? '0');
+        // Añadimos el archivo
+        fd.append('imagen', productoEditado.imagenFile, productoEditado.imagenFile.name);
+
+        console.log('Enviando FormData con archivo, campos:', Array.from(fd.entries()).slice(0, 5));
+
+        response = await fetch(`http://localhost:3000/api/actualizarproducto/${idParaEnviar}`, { method: 'PATCH', body: fd });
+      } else {
+        // Envío tradicional JSON (cuando no hay archivo nuevo)
+        response = await fetch(`http://localhost:3000/api/actualizarproducto/${idParaEnviar}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(productoEditado),
+        });
+      }
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Error en respuesta al actualizar producto:', response.status, text);
+        throw new Error('Error en respuesta del servidor');
+      }
+
+      console.log('Edición enviada correctamente, status:', response.status);
       setMostrarModalEdicion(false);
       obtenerProductos();
     } catch (error) {
@@ -127,19 +157,16 @@ const Productos = () => {
 
   // Abrir modal eliminar
   const abrirModalEliminacion = (producto) => {
-    setProductoAEliminar(producto);
+    setProductoAEliminar({ ...producto, ID_Producto: producto.ID_Producto ?? producto.id_producto });
     setMostrarModalEliminar(true);
   };
 
   // Eliminar producto
   const confirmarEliminacion = async () => {
     try {
-      await fetch(
-        `http://localhost:3000/api/EliminarProducto/${productoAEliminar.id_producto}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const idParaEliminar = productoAEliminar?.ID_Producto ?? productoAEliminar?.id_producto;
+      if (!idParaEliminar) throw new Error('ID de producto no definido para eliminar');
+      await fetch(`http://localhost:3000/api/eliminarproducto/${idParaEliminar}`, { method: 'DELETE' });
 
       setMostrarModalEliminar(false);
       setProductoAEliminar(null);
@@ -170,15 +197,17 @@ const Productos = () => {
       "Stock",
       "Precio Compra",
       "Precio Venta",
+      
     ];
 
     const filas = productosFiltrados.map((p) => [
-      p.id_producto,
+      p.ID_Producto,
       p.Nombre,
       p.Descripcion,
       p.Cantidad,
       `C$ ${Number(p.Precio_Comp).toFixed(2)}`,
       `C$ ${Number(p.Precio_Vent).toFixed(2)}`,
+      
     ]);
 
     autoTable(doc, {
